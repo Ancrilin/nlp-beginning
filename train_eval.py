@@ -28,7 +28,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
             loss = F.cross_entropy(outputs, labels)
             loss.backward()
             optimizer.step()
-            if total_batch % 10 == 0:
+            if total_batch % 100 == 0:
                 # 每多少轮输出在训练集和验证集上的效果
                 true = labels.data.cpu()
                 predic = torch.max(outputs.data, 1)[1].cpu()
@@ -97,7 +97,17 @@ def evaluate(config, model, data_iter, test=False):
         report = metrics.classification_report(labels_all, predict_all, target_names=config.class_list, digits=4)
         confusion = metrics.confusion_matrix(labels_all, predict_all)
         return acc, loss_total / len(data_iter), report, confusion
+        # return acc, loss_total / len(data_iter), confusion
     return acc, loss_total / len(data_iter)
 
-def predict(config, model, test_contents):
-    pass
+def predict(config, model, data_iter):
+    model.eval()
+    predict_all = np.array([], dtype=int)
+    with torch.no_grad():
+        for texts in data_iter:
+            outputs = model(texts)
+            predic = torch.max(outputs.data, 1)[1].cpu().numpy()
+            predict_all = np.append(predict_all, predic)
+    return predict_all
+
+

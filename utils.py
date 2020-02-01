@@ -4,7 +4,11 @@ from nltk.corpus import stopwords
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import torch
-from TextClassify.TextCNN import Config, Model
+from TextClassify.TextCNN import Config
+import time
+from datetime import timedelta
+from gensim.models import KeyedVectors
+from gensim.scripts.glove2word2vec import glove2word2vec
 
 
 MAX_VOCAB_SIZE = 20000  # 词表长度限制
@@ -46,7 +50,7 @@ def build_dataset(config):
         seq_len = len(line)
         if config.pad_size:
             if len(line) < config.pad_size:
-                line.extend(['<PAD>'] * (config.pad_size - len(line)))
+                line.extend([PAD] * (config.pad_size - len(line)))
             else:
                 line = line[:config.pad_size]
                 seq_len = config.pad_size
@@ -64,7 +68,7 @@ def build_dataset(config):
         seq_len = len(line)
         if config.pad_size:
             if len(line) < config.pad_size:
-                line.extend(['<PAD>'] * (config.pad_size - len(line)))
+                line.extend([PAD] * (config.pad_size - len(line)))
             else:
                 line = line[:config.pad_size]
                 seq_len = config.pad_size
@@ -84,8 +88,30 @@ def train_val_test_split(X, y, val_size, test_size, shuffle):
         X_train, y_train, test_size=val_size, stratify=y_train, shuffle=shuffle)
     return X_train, X_val, X_test, y_train, y_val, y_test
 
+def get_pre_embedding_weight(word2vec_output_file, vocab, config):
+    if config.embedding == 'random':
+        return None
+    print('loading word2vec...')
+    wvmodel = KeyedVectors.load_word2vec_format(word2vec_output_file, binary=False, encoding='utf-8')
+    print('loading pre embedding...')
+    weight = torch.ones(len(vocab), wvmodel.vector_size) * vocab[PAD]
+    pad = np.random.rand(wvmodel.vector_size)                                      # padding 随机向量
+    for i, each in tqdm(enumerate(vocab.keys())):
+        try:
+            if each == PAD:
+                vector = pad
+            else:
+                vector = wvmodel.word_vec(each)
+            # print(i, each, 'exist', vector)
+        except:                                                                   # 未知词
+            vector = np.random.rand(wvmodel.vector_size)
+            # print(i, each, 'not exist', vector)
+        weight[i] = torch.from_numpy(vector)
+    # weight = weight
+    return weight, wvmodel.vector_size
+
 class DatasetIterater():
-    def __init__(self, batches, batch_size, device):
+    def __init__(self, batches, batch_size, device, mode):
         self.batches = batches
         self.batch_size = batch_size
         self.n_batches = len(batches) // batch_size
@@ -94,14 +120,16 @@ class DatasetIterater():
             self.residue = True
         self.index = 0
         self.device = device
+        self.mode = mode
 
     def _to_tensor(self, datas):
         x = torch.LongTensor([_[0] for _ in datas]).to(self.device)
-        y = torch.LongTensor([_[1] for _ in datas]).to(self.device)
-
         # pad前的长度(超过pad_size的设为pad_size)
         seq_len = torch.LongTensor([_[2] for _ in datas]).to(self.device)
-        return (x, seq_len), y
+        if self.mode == True:                                                       # train_contents
+            y = torch.LongTensor([_[1] for _ in datas]).to(self.device)
+            return (x, seq_len), y
+        return (x, seq_len)                                                 # p_contents
 
     def __next__(self):
         if self.residue and self.index == self.n_batches:
@@ -128,8 +156,8 @@ class DatasetIterater():
         else:
             return self.n_batches
 
-def build_iterator(dataset, config):
-    iter = DatasetIterater(dataset, config.batch_size, config.device)
+def build_iterator(dataset, config, mode):
+    iter = DatasetIterater(dataset, config.batch_size, config.device, mode)
     return iter
 
 
@@ -151,7 +179,7 @@ if __name__ == '__main__':
     print(y)
     train_contents, val_contents, test_contents, y_train, y_val, y_test = train_val_test_split(contents, y,
                         val_size=config.VAL_SIZE, test_size=config.TEST_SIZE, shuffle=True)
-    train_iter = build_iterator(train_contents, config)
+    train_iter = build_iterator(train_contents, config, True)
     print('train_contents[0]', train_contents[0])
     for i, (trains, labels) in enumerate(train_iter):
         print('i', i)
