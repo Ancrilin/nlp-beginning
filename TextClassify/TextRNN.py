@@ -31,9 +31,7 @@ class Config():
         self.batch_size = 128                                           # mini-batch大小
         self.pad_size = 16                                              # 每句话处理成的长度(短填长切)
         self.learning_rate = 1e-3                                       # 学习率
-        self.num_filters = 256                                          # 卷积核数量(channels数)
         self.embed = 50                                                 # 字向量维度
-        self.filter_sizes = (2, 3, 4)                                   # 卷积核尺寸
 
 
 class Model(nn.Module):
@@ -45,25 +43,5 @@ class Model(nn.Module):
         else:
             print('pred embedding')
             self.embedding = nn.Embedding.from_pretrained(config.pred_embedding_weights, freeze=False)
-        self.convs = nn.ModuleList(
-            [nn.Conv2d(config.channel_size, config.num_filters, (k, config.embed)) for k in config.filter_sizes])
-        self.dropout = nn.Dropout(config.dropout)
-        self.fc = nn.Linear(config.num_filters * len(config.filter_sizes), config.num_classes)
+        # RNN中：batchsize的默认位置是position 1
 
-    def conv_and_pool(self, x, conv):
-        x = F.relu(conv(x)).squeeze(3)
-        x = F.max_pool1d(x, x.size(2)).squeeze(2)
-        return x
-
-    def forward(self, x):
-        # (batch, sentence_length)
-        out = self.embedding(x[0])
-        # (batch, sentence_length, embed_dim)
-        out = out.unsqueeze(1)                #重新拼接, 等价于out=out.view(out.size(0),1,max_len,word_dim)
-        # (batch, 1, sentence_length, embed_dim) CNN中：batchsize的默认位置是position 0. 1的位置为channels，因此这里为1
-        out = torch.cat([self.conv_and_pool(out, conv) for conv in self.convs], 1)  #3个卷积拼接成一个长向量
-        # (batch, kernel_num)
-        # (batch, 3 * kernel_num)
-        out = self.dropout(out)
-        out = self.fc(out)
-        return out

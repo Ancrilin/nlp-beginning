@@ -9,9 +9,9 @@ import pandas as pd
 
 if __name__ == '__main__':
     np.random.seed(1)
-    torch.manual_seed(1)
+    torch.manual_seed(1)                        # 设置随机种子用来保证模型初始化的参数是一致
     torch.cuda.manual_seed_all(1)
-    torch.backends.cudnn.deterministic = True  # 保证每次结果一样
+    torch.backends.cudnn.deterministic = True   # 保证每次结果一样, 因为计算有随机性，每次前馈结果略有差异
     config = Config('pred')
     contents, p_contents, vocab = build_dataset(config)
     print('word2vec_path: ', config.word2vec)

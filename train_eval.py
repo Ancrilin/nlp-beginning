@@ -97,7 +97,6 @@ def evaluate(config, model, data_iter, test=False):
         report = metrics.classification_report(labels_all, predict_all, target_names=config.class_list, digits=4)
         confusion = metrics.confusion_matrix(labels_all, predict_all)
         return acc, loss_total / len(data_iter), report, confusion
-        # return acc, loss_total / len(data_iter), confusion
     return acc, loss_total / len(data_iter)
 
 def predict(config, model, data_iter):
