@@ -1,38 +1,71 @@
 import pandas as pd
 import torch
+import torch.nn as nn
 import numpy as np
-from utils import build_dataset, train_val_test_split, get_pre_embedding_weight
 from gensim.scripts.glove2word2vec import glove2word2vec
 from gensim.models import KeyedVectors
-from TextClassify.TextCNN import Config
+from TextClassifier.TextCNN import Config
 import torch.nn.functional as F
+import logging
+import testini
+import argparse
+import os
+import json
+import nltk
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix, classification_report
+import matplotlib.pyplot as plt
+import itertools
+import pandas as pd
+import logging
+from TextClassifier.TextESIM import Config, Model
+from torch.utils.data.dataloader import DataLoader
+from utils.dataset import MyDataset
+from utils.util import data_processor, get_time_dif, get_pre_embedding
+from run import test
 
+
+def plot_confusion_matrix(y_true, y_pred, classes, cmap=plt.cm.Blues):
+    """Plot a confusion matrix using ground truth and predictions."""
+    # Confusion matrix
+    cm = confusion_matrix(y_true, y_pred)
+    cm_norm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    #  Figure
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    cax = ax.matshow(cm, cmap=plt.cm.Blues)
+    fig.colorbar(cax)
+
+    # Axis
+    plt.title("Confusion matrix")
+    plt.ylabel("True label")
+    plt.xlabel("Predicted label")
+    ax.set_xticklabels([''] + classes)
+    ax.set_yticklabels([''] + classes)
+    ax.xaxis.set_label_position('bottom')
+    ax.xaxis.tick_bottom()
+
+    # Values
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, f"{cm[i, j]:d} ({cm_norm[i, j]*100:.1f}%)",
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    # Display
+    plt.show()
 
 if __name__ == '__main__':
-    UNK, PAD = '<UNK>', '<PAD>'  # 未知字，padding符号
-    # TRAIN_SIZE = 0.7
-    # VAL_SIZE = 0.15
-    # TEST_SIZE = 0.15
-    # dataset = 'data/Sentiment Analysis on Movie Reviews'
-    # train, test_content = build_dataset(dataset, 16, 1, 20000)
-    # train = np.array(train)
-    # print(train[0])
-    # test_content = np.array(test_content)
-    # print(test_content[0])
-    # print(test_content[:, 0])
-    # print(test_content[:, 3])
-    # save = pd.DataFrame({'PhraseId': test_content[:, 3], 'Sentiment': train[:len(test_content), 2]})
-    # save.to_csv('result.csv')
-    config = Config('pred')
-    contents, p_contents, vocab = build_dataset(config)
-    print(vocab)
-    config.n_vocab = len(vocab)
-    print(config.n_vocab)
-    glove_input_file = 'data/glove/glove.6B/glove.6B.300d.txt'
-    word2vec_output_file = 'data/glove/glove.6B/glove.6B.50d.word2vec.txt'
-    print(word2vec_output_file)
-    weights = get_pre_embedding_weight(word2vec_output_file, vocab, config)
-    print(weights.size(), weights)
-    emb = (F.embedding(torch.tensor([[1,2], [3,4]]), weights))
-    print(emb)
-    print(emb.size())
+    x1 = torch.tensor([1, 2, 3, 4, 2])
+    mask = (torch.tensor([2]) != x1).data.numpy()
+    print(mask)
+    sim = [0.1, 0.5, 0.6, 0.3, 0.8]
+    sim = np.array(sim)
+    threshold = 0.5
+    mask *= (sim >= threshold)
+    print(mask)
+    print(sim < threshold)
+    print(1 - mask)
+    result = torch.from_numpy(
+        (sim < threshold) + (1 - mask).astype(float)).float()
+    print(result)

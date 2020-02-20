@@ -4,7 +4,7 @@ from nltk.corpus import stopwords
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import torch
-from TextClassify.TextCNN import Config
+from TextClassifier.TextCNN import Config
 import time
 from datetime import timedelta
 from gensim.models import KeyedVectors
@@ -90,7 +90,7 @@ def train_val_test_split(X, y, val_size, test_size, shuffle):
 
 def get_pre_embedding_weight(word2vec_output_file, vocab, config):
     if config.embedding == 'random':
-        return None
+        return None, 300
     print('loading word2vec...')
     wvmodel = KeyedVectors.load_word2vec_format(word2vec_output_file, binary=False, encoding='utf-8')
     print('loading pre embedding...')

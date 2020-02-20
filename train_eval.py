@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from sklearn import metrics
 import time
@@ -10,8 +9,8 @@ from tensorboardX import SummaryWriter
 def train(config, model, train_iter, dev_iter, test_iter):
     start_time = time.time()
     model.train()
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
-
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)       # 优化器 Adam优化算法
+    classified_loss = torch.nn.CrossEntropyLoss(ignore_index=0).to(config.device)
     # 学习率指数衰减，每次epoch：学习率 = gamma * 学习率
     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
     total_batch = 0  # 记录进行到多少batch

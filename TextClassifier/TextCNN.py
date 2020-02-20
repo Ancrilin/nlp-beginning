@@ -1,29 +1,28 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 
 class Config():
     def __init__(self, embedding):
         self.model_name = 'TextCNN'
         self.embedding = embedding
-        self.dataset = 'data/Sentiment Analysis on Movie Reviews'
-        self.word2vec = 'data/glove/glove.42B.300d/glove.42B.300d.word2vec.txt'
-        self.save_path = 'result/saved_dict/' + self.model_name + '.ckpt'  # 模型训练结果
+        self.dataset = 'data/Sentiment Analysis on Movie Reviews'                   # 训练集路径
+        self.word2vec = 'data/glove/glove.42B.300d/glove.42B.300d.word2vec.txt'     # 预训练路径
+        self.save_path = 'result/saved_dict/' + self.model_name + '.ckpt'           # 模型训练结果
         self.log_path =  'result/log/' + self.model_name
         self.pred_embedding_weights = None
         self.TRAIN_SIZE = 0.7
         self.VAL_SIZE = 0.15
         self.TEST_SIZE = 0.15
-        self.channel_size = 1
+        self.channel_size = 1                                           # 通道数, 文本为 1
         self.n_cluster = 5
-        self.min_freq = 1
+        self.min_freq = 1                                               # 最小词频
         self.MAX_VOCAB_SIZE = 20000
-        self.num_classes = 5
+        self.num_classes = 5                                            # 类别数
         self.require_improvement = 1000                                 # 若超过1000batch效果还没提升，则提前结束训练
         self.class_list = [x.strip() for x in open(
-            'data/class.txt', encoding='utf-8').readlines()]  # 类别名单
+            'data/class.txt', encoding='utf-8').readlines()]            # 类别名单
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')   # 设备
         self.dropout = 0.5                                              # 随机失活
         self.n_vocab = 0                                                # 词表大小，在运行时赋值
@@ -55,6 +54,7 @@ class Model(nn.Module):
         x = F.max_pool1d(x, x.size(2)).squeeze(2)
         return x
 
+    # 怀旧版 CNN
     def forward(self, x):
         # (batch, sentence_length)
         out = self.embedding(x[0])
